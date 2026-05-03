@@ -5,179 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PulseForge • Live Crypto</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
-    body { font-family: 'Inter', system-ui, sans-serif; transition: all 0.4s; }
-    .coin-row { transition: all 0.2s; }
-    .coin-row:hover { background-color: #1f2937; }
-    .modal { animation: modalPop 0.3s ease; }
-    @keyframes modalPop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    body { font-family: 'Inter', system-ui, sans-serif; }
   </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen dark">
+<body class="bg-gray-950 text-white min-h-screen">
 
-  <div class="max-w-7xl mx-auto p-4 md:p-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-      <h1 class="text-4xl font-bold">PulseForge</h1>
-      
-      <div class="flex items-center gap-4">
-        <!-- USDT/NGN -->
-        <div class="bg-gray-900 rounded-3xl px-5 py-3 text-center">
-          <p class="text-gray-400 text-sm">1 USDT =</p>
-          <p id="usdt-ngn" class="text-3xl font-bold text-emerald-400">₦1,375</p>
-        </div>
+  <div class="max-w-7xl mx-auto p-6">
+    <h1 class="text-4xl font-bold mb-8">PulseForge</h1>
 
-        <!-- Theme Toggle -->
-        <button onclick="toggleTheme()" id="theme-toggle" class="w-11 h-11 bg-gray-900 hover:bg-gray-800 rounded-3xl flex items-center justify-center text-2xl">
-          <i class="fas fa-moon"></i>
-        </button>
-
-        <button onclick="loadData()" class="px-6 py-3 bg-gray-900 hover:bg-gray-800 rounded-3xl flex items-center gap-2">
-          <i class="fas fa-sync"></i> Refresh
-        </button>
-      </div>
+    <div id="loading" class="text-center py-10">
+      <i class="fas fa-spinner fa-spin text-4xl text-emerald-400"></i>
+      <p class="mt-4 text-gray-400">Loading live market data...</p>
     </div>
 
-    <!-- Search -->
-    <div class="mb-8 max-w-md">
-      <div class="relative">
-        <input id="searchInput" type="text" onkeyup="filterCoins()" 
-               placeholder="Search any coin..." 
-               class="w-full bg-gray-900 border border-gray-700 rounded-3xl px-6 py-4 text-lg focus:outline-none focus:border-emerald-500">
-        <i class="fas fa-search absolute right-6 top-5 text-gray-400"></i>
-      </div>
+    <div id="error" class="hidden text-center py-10 text-red-400">
+      <p>Failed to load data. Please refresh.</p>
     </div>
 
-    <!-- Table -->
-    <div class="bg-gray-900 rounded-3xl overflow-x-auto">
-      <table class="w-full min-w-[700px]">
-        <thead>
-          <tr class="text-gray-400 border-b border-gray-700">
-            <th class="text-left py-5 px-6">#</th>
-            <th class="text-left py-5 px-6">Coin</th>
-            <th class="text-right py-5 px-6">Price</th>
-            <th class="text-right py-5 px-6">24h</th>
-            <th class="text-right py-5 px-6">Market Cap</th>
-            <th class="text-right py-5 px-6">FDV</th>
-          </tr>
-        </thead>
-        <tbody id="coin-table" class="text-sm md:text-base"></tbody>
-      </table>
-    </div>
-
-    <p class="text-center text-gray-500 text-xs mt-6">Real-time from CoinGecko • Updates every 30s</p>
-  </div>
-
-  <!-- Coin Detail Modal -->
-  <div id="modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal">
-      <div class="p-6 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-gray-900">
-        <div class="flex items-center gap-4" id="modal-header"></div>
-        <button onclick="closeModal()" class="text-3xl text-gray-400 hover:text-white">×</button>
-      </div>
-      
-      <div class="p-6" id="modal-content">
-        <!-- Filled by JS -->
-      </div>
+    <div id="main-content" class="hidden">
+      <!-- Table will appear here -->
     </div>
   </div>
 
   <script>
-    let allCoins = [];
-    let currentTheme = localStorage.getItem('theme') || 'dark';
-
-    function toggleTheme() {
-      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      document.documentElement.classList.toggle('dark', currentTheme === 'dark');
-      localStorage.setItem('theme', currentTheme);
-      document.getElementById('theme-toggle').innerHTML = currentTheme === 'dark' 
-        ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
-    }
-
     async function loadData() {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false');
-        allCoins = await res.json();
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('error').classList.add('hidden');
+        document.getElementById('main-content').classList.add('hidden');
 
-        const rateRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=ngn');
-        const rate = await rateRes.json();
-        document.getElementById('usdt-ngn').textContent = `₦${rate.tether.ngn.toLocaleString()}`;
+        const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=30&page=1');
+        
+        if (!res.ok) throw new Error("API error");
 
-        let html = '';
-        allCoins.forEach((coin, i) => {
+        const coins = await res.json();
+
+        let html = `
+          <table class="w-full bg-gray-900 rounded-3xl overflow-hidden">
+            <thead>
+              <tr class="border-b border-gray-700 text-gray-400">
+                <th class="text-left py-5 px-6">#</th>
+                <th class="text-left py-5 px-6">Coin</th>
+                <th class="text-right py-5 px-6">Price</th>
+                <th class="text-right py-5 px-6">24h</th>
+              </tr>
+            </thead>
+            <tbody class="text-base">
+        `;
+
+        coins.forEach((coin, i) => {
           const change = coin.price_change_percentage_24h || 0;
           const color = change >= 0 ? 'text-emerald-400' : 'text-red-400';
           html += `
-            <tr onclick="showCoinDetail('${coin.id}', ${i})" class="coin-row border-b border-gray-700 last:border-none cursor-pointer">
-              <td class="py-5 px-6 font-medium">${i+1}</td>
+            <tr class="border-b border-gray-700 hover:bg-gray-800">
+              <td class="py-5 px-6">${i+1}</td>
               <td class="py-5 px-6 flex items-center gap-3">
-                <img src="${coin.image}" class="w-8 h-8 rounded-full" alt="">
-                <div>
-                  <div class="font-semibold">${coin.name}</div>
-                  <div class="text-gray-400 text-sm">${coin.symbol.toUpperCase()}</div>
-                </div>
+                <img src="${coin.image}" class="w-8 h-8 rounded-full">
+                <div>${coin.name} <span class="text-gray-400">(${coin.symbol.toUpperCase()})</span></div>
               </td>
-              <td class="py-5 px-6 text-right font-medium">$${coin.current_price.toLocaleString()}</td>
+              <td class="py-5 px-6 text-right">$${coin.current_price.toLocaleString()}</td>
               <td class="py-5 px-6 text-right ${color}">${change.toFixed(2)}%</td>
-              <td class="py-5 px-6 text-right">$${(coin.market_cap/1e9).toFixed(2)}B</td>
-              <td class="py-5 px-6 text-right">$${(coin.fully_diluted_valuation/1e9).toFixed(2)||'—'}B</td>
             </tr>`;
         });
-        document.getElementById('coin-table').innerHTML = html;
-      } catch (e) { console.log("Error"); }
+
+        html += `</tbody></table>`;
+        document.getElementById('main-content').innerHTML = html;
+        document.getElementById('main-content').classList.remove('hidden');
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('error').classList.remove('hidden');
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+      }
     }
 
-    function filterCoins() {
-      const term = document.getElementById('searchInput').value.toLowerCase();
-      const rows = document.querySelectorAll('#coin-table tr');
-      rows.forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
-      });
-    }
-
-    async function showCoinDetail(coinId, index) {
-      const coin = allCoins[index];
-      const modal = document.getElementById('modal');
-      const header = document.getElementById('modal-header');
-      const content = document.getElementById('modal-content');
-
-      header.innerHTML = `
-        <img src="${coin.image}" class="w-10 h-10 rounded-full">
-        <div>
-          <h2 class="text-2xl font-bold">${coin.name} <span class="text-gray-400">${coin.symbol.toUpperCase()}</span></h2>
-          <p class="text-emerald-400">$${coin.current_price.toLocaleString()}</p>
-        </div>
-      `;
-
-      content.innerHTML = `
-        <div class="grid grid-cols-2 gap-4 mb-8">
-          <div class="bg-gray-800 rounded-2xl p-4">
-            <p class="text-gray-400">ATH</p>
-            <p class="text-xl font-bold">$${coin.ath ? coin.ath.toLocaleString() : '—'}</p>
-          </div>
-          <div class="bg-gray-800 rounded-2xl p-4">
-            <p class="text-gray-400">ATL</p>
-            <p class="text-xl font-bold">$${coin.atl ? coin.atl.toLocaleString() : '—'}</p>
-          </div>
-        </div>
-
-        <!-- Converter -->
-        <div class="mb-8">
-          <p class="text-gray-400 mb-2">Converter</p>
-          <div class="flex gap-3">
-            <input id="amount" type="number" value="1" class="bg-gray-800 rounded-2xl px-4 py-3 w-24 text-center text-lg focus:outline-none">
-            <span class="text-2xl self-center">${coin.symbol.toUpperCase()}</span>
-            <span class="text-2xl self-center">→</span>
-            <input id="converted" type="text" readonly class="bg-gray-800 rounded-2xl px-4 py-3 flex-1 text-lg">
-          </div>
-        </div>
-
-        <!-- 7-day Chart -->
-        <div class="mb-8">
-          <p class="text-gray-400 mb-3">7-Day Price Chart</p>
-          <canvas id="priceChart" height="180"></canvas>
-        </div>
-
-        <button onclick="closeModal()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 rounded-3xl text-lg font-medium">Close</button>
+    loadData();
+    setInterval(loadData, 60000); // Refresh every 60 seconds
+  </script>
+</body>
+</html>
