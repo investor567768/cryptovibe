@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CryptoVibe NG • Live</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .card { transition: all 0.3s; }
+    .card:hover { transform: translateY(-2px); }
+    table tr:hover { background-color: #1f2937; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-4xl font-bold">CryptoVibe <span class="text-emerald-400">NG</span></h1>
+      <div class="flex items-center gap-6">
+        <div class="bg-gray-900 rounded-2xl px-5 py-3 text-center">
+          <p class="text-gray-400 text-sm">1 USDT =</p>
+          <p id="usdt-ngn" class="text-3xl font-bold text-emerald-400">₦1,375.00</p>
+        </div>
+        <button onclick="loadData()" class="px-5 py-3 bg-gray-900 hover:bg-gray-800 rounded-2xl flex items-center gap-2">
+          <i class="fas fa-sync"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-gray-900 rounded-3xl p-6">
+      <h2 class="text-2xl font-semibold mb-4">Top Cryptocurrencies (Live)</h2>
+      <table class="w-full">
+        <thead>
+          <tr class="text-gray-400 border-b border-gray-700">
+            <th class="text-left py-4 px-6">#</th>
+            <th class="text-left py-4 px-6">Coin</th>
+            <th class="text-right py-4 px-6">Price (USD)</th>
+            <th class="text-right py-4 px-6">24h %</th>
+            <th class="text-right py-4 px-6">Market Cap</th>
+            <th class="text-right py-4 px-6">FDV</th>
+          </tr>
+        </thead>
+        <tbody id="coin-table" class="text-sm"></tbody>
+      </table>
+    </div>
+
+    <p class="text-center text-gray-500 text-xs mt-6">
+      Real-time data from CoinGecko • Updates every 30 seconds
+    </p>
+  </div>
+
+  <script>
+    async function loadData() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false');
+        const coins = await res.json();
+
+        const rateRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=ngn');
+        const rateData = await rateRes.json();
+        const usdtNgn = rateData.tether.ngn.toLocaleString();
+
+        document.getElementById('usdt-ngn').textContent = `₦${usdtNgn}`;
+
+        let html = '';
+        coins.forEach((coin, index) => {
+          const change = coin.price_change_percentage_24h;
+          const color = change >= 0 ? 'text-emerald-400' : 'text-red-400';
+
+          html += `
+            <tr class="border-b border-gray-700 hover:bg-gray-800">
+              <td class="py-5 px-6 font-medium">${index + 1}</td>
+              <td class="py-5 px-6 flex items-center gap-3">
+                <img src="${coin.image}" class="w-6 h-6 rounded-full" alt="">
+                <span>${coin.name} <span class="text-gray-400 text-xs">${coin.symbol.toUpperCase()}</span></span>
+              </td>
+              <td class="py-5 px-6 text-right font-medium">$${coin.current_price.toLocaleString()}</td>
+              <td class="py-5 px-6 text-right ${color} font-medium">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</td>
+              <td class="py-5 px-6 text-right">$${(coin.market_cap / 1000000000).toFixed(2)}B</td>
+              <td class="py-5 px-6 text-right">$${(coin.fully_diluted_valuation / 1000000000).toFixed(2) || '—'}B</td>
+            </tr>`;
+        });
+
+        document.getElementById('coin-table').innerHTML = html;
+      } catch (e) {
+        console.log("Error loading data");
+      }
+    }
+
+    setInterval(loadData, 30000);
+    loadData();
+  </script>
+</body>
+</html>
